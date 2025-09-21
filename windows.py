@@ -54,31 +54,48 @@ def process_file(directory, filename):
     jpg_path = os.path.join(directory, filename)
     base_filename, ext = os.path.splitext(filename)
 
-    # Search for matching JSONs for files
-    patterns = [
-        os.path.join(directory, f"{filename}*.json"),       # IMG_0085(1).PNG*.json
-        os.path.join(directory, f"{base_filename}*.json")   # IMG_0085(1)*.json
+    # known JSON patterns
+    json_patterns = [
+        "{}.json",
+        "{}-info.json",
+        "{}.supplemental-metadata.json",
+        "{}.supplemental-met.json",
+        "{}.supplemental-metad.json",
+        "{}.suppl.json",
+        "{}.supple.json",
+        "{}.supplementa.json",
+        "{}.supplemental-m.json",
+        "{}.supplemental-metadat.json"
     ]
 
-    json_candidates = []
-    for pat in patterns:
-        json_candidates.extend(glob.glob(pat))
+    candidates = [filename, base_filename]
 
-    for json_path in json_candidates:
-        try:
-            with open(json_path, 'r') as json_file:
-                data = json.load(json_file)
-                timestampcreated = get_timestampcreated(data)
-                timestampmodified = get_timestampmodified(data)
-                modify_time(jpg_path, timestampcreated, timestampmodified)
-                print(f"Updated {jpg_path} with timestamp {timestampcreated}")
-            
-            os.remove(json_path)
-            print(f"Removed {json_path}")
-            break
-        except Exception as e:
-            print(f"Failed to process {json_path}: {e}")
-            continue
+    # build json paths using patterns
+    json_paths = []
+    for cand in candidates:
+        for pat in json_patterns:
+            json_paths.append(os.path.join(directory, pat.format(cand)))
+
+    # also allow glob for cases like (1).json, (2).json
+    json_paths.extend(glob.glob(os.path.join(directory, f"{filename}*.json")))
+    json_paths.extend(glob.glob(os.path.join(directory, f"{base_filename}*.json")))
+
+    for json_path in json_paths:
+        if os.path.exists(json_path):
+            try:
+                with open(json_path, 'r') as json_file:
+                    data = json.load(json_file)
+                    timestampcreated = get_timestampcreated(data)
+                    timestampmodified = get_timestampmodified(data)
+                    modify_time(jpg_path, timestampcreated, timestampmodified)
+                    print(f"Updated {jpg_path} with timestamp {timestampcreated}")
+                
+                os.remove(json_path)
+                print(f"Removed {json_path}")
+                break
+            except Exception as e:
+                print(f"Failed to process {json_path}: {e}")
+                continue
 
 def process_directory(directory, recursive=False):
     for root, _, files in os.walk(directory):
