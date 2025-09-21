@@ -28,8 +28,11 @@ def get_timestampmodified(data):
         print("pieter2") #debug
         return int(data['creationTime']['timestamp'])
     elif 'content_last_modified' in data:
-        print("post2") #debug
-        dt = datetime.strptime(data['content_last_modified'], "%Y-%m-%dT%H:%M:%SZ")
+        print("post22") #debug
+        if data.get('permissions') and 'name' in data['permissions'][0]:
+            dt = datetime.strptime(data['content_last_modified'], "%Y-%m-%dT%H:%M:%S.%fZ")
+        else:
+            dt = datetime.strptime(data['content_last_modified'], "%Y-%m-%dT%H:%M:%SZ")
         return int(dt.timestamp())
     else:
         raise KeyError("No valid timestamp found in JSON data")
@@ -61,6 +64,7 @@ def process_file(directory, filename):
                 break
             except Exception as e:
                 print(f"Failed to process {json_path}: {e}")
+                exit
 
 def process_directory(directory, recursive=False):
     for root, _, files in os.walk(directory):
@@ -70,6 +74,7 @@ def process_directory(directory, recursive=False):
                     process_file(root, filename)
             except Exception as e:
                 print(f"Failed to process {filename} in {root}: {e}")
+                exit
         if not recursive:
             break
 
