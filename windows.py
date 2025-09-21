@@ -18,7 +18,11 @@ def get_timestampcreated(data):
         return int(data['photoTakenTime']['timestamp'])
     elif 'created' in data:
         print("post1") #debug
-        dt = datetime.strptime(data['created'], "%Y-%m-%dT%H:%M:%S.%fZ")
+        date_str = data['created']
+        if '.' not in date_str:  # no fractional seconds
+            dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
+        else:
+            dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
         return int(dt.timestamp())
     else:
         raise KeyError("No valid timestamp found in JSON data")
@@ -29,10 +33,11 @@ def get_timestampmodified(data):
         return int(data['creationTime']['timestamp'])
     elif 'content_last_modified' in data:
         print("post22") #debug
-        if data.get('permissions') and 'name' in data['permissions'][0]:
-            dt = datetime.strptime(data['content_last_modified'], "%Y-%m-%dT%H:%M:%S.%fZ")
+        date_str = data['content_last_modified']
+        if '.' not in date_str:  # no fractional seconds
+            dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
         else:
-            dt = datetime.strptime(data['content_last_modified'], "%Y-%m-%dT%H:%M:%SZ")
+            dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
         return int(dt.timestamp())
     else:
         raise KeyError("No valid timestamp found in JSON data")
@@ -43,9 +48,24 @@ def process_file(directory, filename):
         os.path.join(directory, f"{filename}.json"),
         os.path.join(directory, f"{filename}-info.json"),
         os.path.join(directory, f"{filename}.supplemental-metadata.json"),
+        os.path.join(directory, f"{filename}.supplemental-met.json"),
+        os.path.join(directory, f"{filename}.supplemental-metad.json"),
+        os.path.join(directory, f"{filename}.suppl.json"),
+        os.path.join(directory, f"{filename}.supple.json"),
+        os.path.join(directory, f"{filename}.supplementa.json"),
+        os.path.join(directory, f"{filename}.supplemental-m.json"),
+        os.path.join(directory, f"{filename}.supplemental-m.json"),
         os.path.join(directory, f"{base_filename}.json"),
         os.path.join(directory, f"{base_filename}-info.json"),
-        os.path.join(directory, f"{base_filename}.supplemental-metadata.json")
+        os.path.join(directory, f"{base_filename}.supplemental-metadata.json"),
+        os.path.join(directory, f"{base_filename}.supplemental-met.json"),
+        os.path.join(directory, f"{base_filename}.supplemental-metad.json"),
+        os.path.join(directory, f"{base_filename}.suppl.json"),
+        os.path.join(directory, f"{base_filename}.supple.json"),
+        os.path.join(directory, f"{base_filename}.supplementa.json"),
+        os.path.join(directory, f"{base_filename}.supplemental-m.json"),
+        os.path.join(directory, f"{base_filename}.supplemental-metadat.json")
+
     ]
     jpg_path = os.path.join(directory, filename)
 
@@ -64,7 +84,7 @@ def process_file(directory, filename):
                 break
             except Exception as e:
                 print(f"Failed to process {json_path}: {e}")
-                exit
+                sys.exit()
 
 def process_directory(directory, recursive=False):
     for root, _, files in os.walk(directory):
@@ -74,7 +94,7 @@ def process_directory(directory, recursive=False):
                     process_file(root, filename)
             except Exception as e:
                 print(f"Failed to process {filename} in {root}: {e}")
-                exit
+                sys.exit()
         if not recursive:
             break
 
