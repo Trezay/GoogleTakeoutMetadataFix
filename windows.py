@@ -6,16 +6,19 @@ import win32file
 import win32con
 import glob
 
-def modify_time(file_path, timestampcreated, timestampmodified):
+def modify_time(file_path, timestampcreated, timestampmodified, is_dir=False):
     dt = datetime.fromtimestamp(timestampcreated, tz=timezone.utc)
     dtc = datetime.fromtimestamp(timestampmodified, tz=timezone.utc)
+
+    flags = win32con.FILE_FLAG_BACKUP_SEMANTICS if is_dir else win32con.FILE_ATTRIBUTE_NORMAL
+
     handle = win32file.CreateFile(
         file_path,
         win32file.GENERIC_WRITE,
         0,
         None,
         win32con.OPEN_EXISTING,
-        win32con.FILE_ATTRIBUTE_NORMAL,
+        flags,
         None
     )
     win32file.SetFileTime(handle, dt, None, dtc)
@@ -49,10 +52,9 @@ def get_timestampmodified(data):
 
 def process_file(directory, filename):
     jpg_path = os.path.join(directory, filename)
-
     base_filename, ext = os.path.splitext(filename)
 
-    # Search for any JSONs that start with the image name (with extension or without)
+    # Search for matching JSONs for files
     patterns = [
         os.path.join(directory, f"{filename}*.json"),       # IMG_0085(1).PNG*.json
         os.path.join(directory, f"{base_filename}*.json")   # IMG_0085(1)*.json
@@ -73,7 +75,7 @@ def process_file(directory, filename):
             
             os.remove(json_path)
             print(f"Removed {json_path}")
-            break  # stop after first good JSON
+            break
         except Exception as e:
             print(f"Failed to process {json_path}: {e}")
             continue
@@ -81,6 +83,28 @@ def process_file(directory, filename):
 def process_directory(directory, recursive=False):
     for root, _, files in os.walk(directory):
         for filename in files:
+            # Handle directory-level JSONs like Jerry-info.json
+            if filename.lower().endswith("-info.json"):
+                base = filename[:-10]  # strip "-info.json"
+                folder_path = os.path.join(root, base)
+                json_path = os.path.join(root, filename)
+
+                if os.path.isdir(folder_path):
+                    try:
+                        with open(json_path, 'r') as json_file:
+                            data = json.load(json_file)
+                            timestampcreated = get_timestampcreated(data)
+                            timestampmodified = get_timestampmodified(data)
+                            modify_time(folder_path, timestampcreated, timestampmodified, is_dir=True)
+                            print(f"Updated folder {folder_path} with timestamp {timestampcreated}")
+                        
+                        os.remove(json_path)
+                        print(f"Removed {json_path}")
+                    except Exception as e:
+                        print(f"Failed to process folder metadata {json_path}: {e}")
+                continue
+
+            # Handle normal files
             try:
                 if not filename.lower().endswith('.json'):
                     process_file(root, filename)
